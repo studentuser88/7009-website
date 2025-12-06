@@ -1,0 +1,4 @@
+secrets/
+.env
+*.log
+node_modules/
