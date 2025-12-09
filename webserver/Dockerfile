@@ -1,30 +1,35 @@
-# Webserver Dockerfile
-# Multi-stage build for webserver
-FROM alpine:3.18 AS builder
-RUN apk add --no-cache nginx php php-fpm php-mysqlnd
+FROM nginx:1.25-alpine
 
-FROM alpine:3.18
-# Install only runtime essentials; removed SSH for security
-RUN apk add --no-cache nginx php php-fpm php-mysqlnd && \
-    rm -rf /var/cache/apk/*
+WORKDIR /
 
-# Create non-root user
+# Install PHP + dependencies and update packages
+RUN apk update && \
+    apk add --no-cache php php-fpm php-mysqlnd curl
+
+# Create www user with UID 1001 (Matching permissions)
 RUN addgroup -g 1001 www && \
     adduser -D -u 1001 -G www www
 
-COPY --from=builder /usr/sbin/nginx /usr/sbin/
-COPY --from=builder /usr/bin/php* /usr/bin/
+# --- COPY FILES ---
 COPY webfiles/ /usr/share/nginx/html
 COPY configfiles/nginx.conf /etc/nginx/nginx.conf
-COPY configfiles/php.ini /etc/php.ini
-COPY configfiles/www.conf /etc/php-fpm.d/www.conf
+
+# FIX: Copy PHP configs to the generic /etc/php path for better version compatibility
+COPY configfiles/php.ini /etc/php/php.ini
+COPY configfiles/www.conf /etc/php/php-fpm.d/www.conf
+COPY configfiles/php-fpm.conf /etc/nginx/conf.d/php-fpm.conf
 COPY configfiles/docker-entrypoint.sh /
 
-# Secure permissions
-RUN chown -R www:www /usr/share/nginx/html /var/log/nginx /run && \
+# --- PERMISSIONS FIXES (CRITICAL) ---
+
+RUN mkdir -p /run/php-fpm && \
+    chown -R www:www /usr/share/nginx/html /run/php-fpm
+
+RUN chown -R www:www /var/cache/nginx && \
+    chown -R www:www /var/log/nginx && \
+    chmod 755 /var/cache/nginx && \
     chmod +x /docker-entrypoint.sh
 
-USER www
 EXPOSE 80
-ENTRYPOINT ["/docker-entrypoint.sh"]
 
+ENTRYPOINT ["/docker-entrypoint.sh"]

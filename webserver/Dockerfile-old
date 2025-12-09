@@ -1,0 +1,29 @@
+# Webserver Dockerfile
+
+FROM nginx:1.25-alpine
+
+WORKDIR /
+# Install only runtime essentials; removed SSH for security
+RUN apk add --no-cache php php-fpm php-mysqlnd curl && \
+    rm -rf /var/cache/apk/*
+
+# Create non-root user (kept for file ownership of web files)
+#RUN addgroup -g 1001 www && \
+#    adduser -D -u 1001 -G www www
+
+COPY webfiles/ /usr/share/nginx/html
+COPY configfiles/nginx.conf /etc/nginx/nginx.conf
+COPY configfiles/php.ini /etc/php.ini
+COPY configfiles/www.conf /etc/php-fpm.d/www.conf
+COPY configfiles/docker-entrypoint.sh /
+
+# Create runtime directory at build time so it's present when container is read-only,
+# and ensure ownership so php-fpm/nginx can use it after startup (entrypoint runs as root).
+RUN mkdir -p /run/php-fpm && \
+    chown -R www:www /usr/share/nginx/html /var/log/nginx /run /var/lib/nginx /run/php-fpm && \
+    chmod +x /docker-entrypoint.sh
+USER www
+# Do NOT set USER here. Entrypoint needs to run as root to start services and create sockets.
+EXPOSE 80
+
+ENTRYPOINT ["./docker-entrypoint.sh"]
