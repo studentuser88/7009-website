@@ -25,9 +25,10 @@ COPY configfiles/docker-entrypoint.sh /
 RUN mkdir -p /run/php-fpm && \
     chown -R www:www /usr/share/nginx/html /run/php-fpm
 
-RUN chown -R www:www /var/cache/nginx && \
-    chown -R www:www /var/log/nginx && \
-    chmod 755 /var/cache/nginx && \
+RUN chown -R root:www /var/cache/nginx && \
+    chown -R root:www /var/log/nginx && \
+    chmod -R 775 /var/cache/nginx && \
+    chmod -R 775 /var/log/nginx && \
     chmod +x /docker-entrypoint.sh
 
 EXPOSE 80

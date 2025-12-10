@@ -40,6 +40,9 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
+      - CHOWN
+      - SETUID
+      - SETGID
 #    read_only: true
     # make a writable tmpfs for runtime sockets/dirs that must be writable at runtime
   #  tmpfs:
